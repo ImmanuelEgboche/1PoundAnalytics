@@ -43,19 +43,14 @@ refresh_data = st.sidebar.button('Refresh Data')
 
 @st.cache_data(ttl=3600)
 def load_match_data():
-    st.write("🔍 Starting load_match_data function...")
     try:
-        st.write("📂 Attempting to open file...")
         with open('results.json', 'r') as f:
-            st.write("reading json..")
             raw_data = json.load(f)
-        st.write(f"✅ Loaded {len(raw_data)} matches successfully!")
 
         result = {
             'matches': raw_data, 
             'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
-        st.write("📦 Returning data...")
 
     
 
@@ -116,9 +111,6 @@ data = load_match_data()
 
 df = pd.DataFrame(data['matches'])
 
-st.write("🔍 **Debug - DataFrame info:**")
-st.write("DataFrame columns:", df.columns.tolist())
-st.write("DataFrame shape:", df.shape)
 if not df.empty:
     st.write("First row keys:", df.iloc[0].to_dict().keys())
     st.write("Has total_rounds?", 'total_rounds' in df.columns)
