@@ -41,6 +41,7 @@ st.sidebar.header("Controls")
 refresh_data = st.sidebar.button('Refresh Data')
 
 
+
 @st.cache_data(ttl=3600)
 def load_match_data():
     try:
@@ -111,9 +112,7 @@ data = load_match_data()
 
 df = pd.DataFrame(data['matches'])
 
-if not df.empty:
-    st.write("First row keys:", df.iloc[0].to_dict().keys())
-    st.write("Has total_rounds?", 'total_rounds' in df.columns)
+
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -121,7 +120,6 @@ with col1:
     st.metric("Total Matches", len(df))
 
 with col2:
-    st.write(df) 
     unique_characters = len(pd.concat([df['p1_chara_id'], df['p2_chara_id']]).unique())
     st.metric("Unique Charcters", unique_characters)
 
@@ -134,3 +132,93 @@ with col4:
 
 st.markdown("---")
 
+st.header("Character Win Rate Analysis")
+
+# Calculate character win rates
+winner_characters = []
+for _, match in df.iterrows():
+    if match['winner'] == 1:
+        winner_characters.append(match['p1_chara_id'])  # p1 character wins
+    else:
+        winner_characters.append(match['p2_chara_id'])  # p2 character wins
+
+# Count wins per character
+character_wins = pd.Series(winner_characters).value_counts()
+
+# Count total appearances per character
+all_characters = pd.concat([df['p1_chara_id'], df['p2_chara_id']])
+character_appearances = all_characters.value_counts()
+
+# Calculate win rates (only for characters with 2+ matches to avoid statistical noise)
+win_rate_data = []
+for character in character_appearances.index:
+    total_matches = character_appearances[character]
+    wins = character_wins.get(character, 0)
+    
+    if total_matches >= 2:  # Filter out characters with only 1 match
+        win_rate = (wins / total_matches) * 100
+        win_rate_data.append({
+            'Character': character,
+            'Win_Rate': round(win_rate, 1),
+            'Wins': wins,
+            'Total_Matches': total_matches
+        })
+
+if win_rate_data:
+    win_rate_df = pd.DataFrame(win_rate_data).sort_values('Win_Rate', ascending=True)
+    
+    # Display the bar chart
+    st.bar_chart(win_rate_df.set_index('Character')['Win_Rate'])
+    
+    # Show detailed table
+    st.subheader("Detailed Statistics")
+    display_df = win_rate_df.sort_values('Win_Rate', ascending=False)
+    display_df['Win_Rate'] = display_df['Win_Rate'].astype(str) + '%'
+    st.dataframe(display_df, use_container_width=True)
+
+else:
+    st.info("Not enough data for win rate analysis. Need characters with 2+ matches for reliable statistics.")
+
+viz_col1, viz_col2 = st.columns(2)
+
+with viz_col1:
+    st.subheader("Character Win Rates")
+    
+    # Calculate character win rates
+    winner_characters = []
+    for _, match in df.iterrows():
+        if match['winner'] == 1:
+            winner_characters.append(match['p1_chara_id'])  # p1 character wins
+        else:
+            winner_characters.append(match['p2_chara_id'])  # p2 character wins
+    
+    # Count wins per character
+    character_wins = pd.Series(winner_characters).value_counts()
+    
+    # Count total appearances per character
+    all_characters = pd.concat([df['p1_chara_id'], df['p2_chara_id']])
+    character_appearances = all_characters.value_counts()
+    
+    # Calculate win rates (only for characters with 2+ matches to avoid statistical noise)
+    win_rate_data = []
+    for character in character_appearances.index:
+        total_matches = character_appearances[character]
+        wins = character_wins.get(character, 0)
+        
+        if total_matches >= 2:  # Filter out characters with only 1 match
+            win_rate = (wins / total_matches) * 100
+            win_rate_data.append({
+                'Character': character,
+                'Win_Rate': round(win_rate, 1),
+                'Matches': total_matches
+            })
+    
+    if win_rate_data:
+        win_rate_df = pd.DataFrame(win_rate_data).sort_values('Win_Rate', ascending=True)
+        st.bar_chart(win_rate_df.set_index('Character')['Win_Rate'])
+        
+        # Show the data table
+        st.write("Win Rate Details:")
+        st.dataframe(win_rate_df.sort_values('Win_Rate', ascending=False))
+    else:
+        st.info("Not enough data for win rate analysis (need characters with 2+ matches)")
